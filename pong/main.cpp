@@ -6,9 +6,9 @@ constexpr auto SCREEN_HEIGHT = 1000;
 constexpr auto SCREEN_WIDTH = 1000;
 constexpr auto PADDLE_MOVEMENT_SPEED = 20;
 constexpr auto BALL_BASE_X_VELOCITY = 5;
-constexpr auto BALL_BASE_Y_VELOCITY = -5;
+constexpr auto BALL_BASE_Y_VELOCITY = 5;
 constexpr auto PI = 3.14;
-constexpr auto INITIAL_BALL_ANGLE = ((3 / 2) * PI) * (180 / PI);
+constexpr auto INITIAL_BALL_ANGLE = (3.14 * 5) / 2;
 constexpr auto FRAME_DELAY = 1000 / 60;
 
 enum Direction {
@@ -26,6 +26,8 @@ struct Ball {
 	int radius;
 	int center_x;
 	int center_y;
+	int x_velocity;
+	int y_velocity;
 };
 
 void drawBallPoints(SDL_Renderer* renderer, int center_x, int center_y, int x_diff, int y_diff) {
@@ -61,13 +63,26 @@ void drawBall(SDL_Renderer* renderer, Ball* ball) {
 
 }
 
-void updateBall(Ball* ball) {
-	float x_diff = BALL_BASE_X_VELOCITY * cos((*ball).angle);
-	float y_diff = BALL_BASE_Y_VELOCITY * sin((*ball).angle);
+void updateBall(Ball* ball, Paddle* paddle) {
+	float x_diff = ((*ball).x_velocity) * cos((*ball).angle);
+	float y_diff = ((*ball).y_velocity) * sin((*ball).angle);
 	(*(*ball).hitbox).x += x_diff;
 	(*(*ball).hitbox).y += y_diff;
 	(*ball).center_x += x_diff;
 	(*ball).center_y += y_diff;
+
+	//touching paddle?
+	if (SDL_HasIntersection((*ball).hitbox, (*paddle).paddle_rectangle)) {
+		std::cout << "hit";
+		(*ball).angle *= -1;
+		x_diff = ((*ball).x_velocity*10) * cos((*ball).angle);
+		y_diff = ((*ball).y_velocity*10) * sin((*ball).angle);
+		(*(*ball).hitbox).x += x_diff;
+		(*(*ball).hitbox).y += y_diff;
+		(*ball).center_x += x_diff;
+		(*ball).center_y += y_diff;
+	}
+
 }
 
 void updatePaddle(Paddle* paddle, SDL_Event* event) {
@@ -113,7 +128,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	Ball game_ball = { NULL, INITIAL_BALL_ANGLE, 10, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 6 };
+	Ball game_ball = { NULL, INITIAL_BALL_ANGLE, 10, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 6, BALL_BASE_X_VELOCITY, BALL_BASE_Y_VELOCITY};
 	game_ball.hitbox = (SDL_Rect*)malloc(sizeof(SDL_Rect));
 
 	if (game_ball.hitbox != NULL) {
@@ -131,7 +146,7 @@ int main(int argc, char* argv[]) {
 			}
 			updatePaddle(&game_paddle, &event);
 		}
-		updateBall(&game_ball);
+		updateBall(&game_ball, &game_paddle);
 		renderScreen(gRenderer, &game_paddle, &game_ball);
 
 		SDL_Delay(FRAME_DELAY);

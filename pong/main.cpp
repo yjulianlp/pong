@@ -1,12 +1,15 @@
 #include <SDL.h>
 #include <iostream>
+#include <cmath>
 
 constexpr auto SCREEN_HEIGHT = 1000;
 constexpr auto SCREEN_WIDTH = 1000;
 constexpr auto PADDLE_MOVEMENT_SPEED = 20;
-constexpr auto BALL_BASE_X_VELOCITY = 10;
-constexpr auto BALL_BASE_Y_VELOCITY = 10;
+constexpr auto BALL_BASE_X_VELOCITY = 5;
+constexpr auto BALL_BASE_Y_VELOCITY = -5;
 constexpr auto PI = 3.14;
+constexpr auto INITIAL_BALL_ANGLE = ((3 / 2) * PI) * (180 / PI);
+constexpr auto FRAME_DELAY = 1000 / 60;
 
 enum Direction {
 	LEFT,
@@ -58,16 +61,29 @@ void drawBall(SDL_Renderer* renderer, Ball* ball) {
 
 }
 
-void movePaddle(Paddle* paddle, enum Direction dir) {
-	if (dir == LEFT) {
-		(*(*paddle).paddle_rectangle).x -= PADDLE_MOVEMENT_SPEED;
-	}
-	else {
-		(*(*paddle).paddle_rectangle).x += PADDLE_MOVEMENT_SPEED;
+void updateBall(Ball* ball) {
+	float x_diff = BALL_BASE_X_VELOCITY * cos((*ball).angle);
+	float y_diff = BALL_BASE_Y_VELOCITY * sin((*ball).angle);
+	(*(*ball).hitbox).x += x_diff;
+	(*(*ball).hitbox).y += y_diff;
+	(*ball).center_x += x_diff;
+	(*ball).center_y += y_diff;
+}
+
+void updatePaddle(Paddle* paddle, SDL_Event* event) {
+	const Uint8* pressed_keys = SDL_GetKeyboardState(NULL);
+	if (pressed_keys[SDL_SCANCODE_A]) {
+		if ((*(*paddle).paddle_rectangle).x > 0) {
+			(*(*paddle).paddle_rectangle).x -= PADDLE_MOVEMENT_SPEED;
+		}	
+	}else if(pressed_keys[SDL_SCANCODE_D]) {
+		if ((*(*paddle).paddle_rectangle).x < SCREEN_WIDTH) {
+			(*(*paddle).paddle_rectangle).x += PADDLE_MOVEMENT_SPEED;
+		}
 	}
 }
 
-void updateScreen(SDL_Renderer* renderer, Paddle* paddle, Ball* ball) {
+void renderScreen(SDL_Renderer* renderer, Paddle* paddle, Ball* ball) {
 	SDL_SetRenderDrawColor(renderer, 0 ,0 ,0 , 1);
 	SDL_RenderClear(renderer);
 	SDL_RenderFillRect(renderer, (*ball).hitbox);
@@ -76,7 +92,6 @@ void updateScreen(SDL_Renderer* renderer, Paddle* paddle, Ball* ball) {
 	drawBall(renderer, ball);
 	SDL_RenderPresent(renderer);
 }
-
 
 int main(int argc, char* argv[]) {
 	bool running = true;
@@ -98,7 +113,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	Ball game_ball = { NULL, ((3 / 2) * PI) * (1 / PI), 10, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 6 };
+	Ball game_ball = { NULL, INITIAL_BALL_ANGLE, 10, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 6 };
 	game_ball.hitbox = (SDL_Rect*)malloc(sizeof(SDL_Rect));
 
 	if (game_ball.hitbox != NULL) {
@@ -108,27 +123,19 @@ int main(int argc, char* argv[]) {
 		std::cout << "malloc failed";
 		return 1;
 	}
-	
-	updateScreen(gRenderer, &game_paddle, &game_ball);
 
 	while (running) {
 		while (SDL_PollEvent(&event) != 0) {
 			if (event.type == SDL_QUIT) {
 				running = false;
 			}
-			else {
-				SDL_Keycode pressed_key = event.key.keysym.sym;
-				if (pressed_key == SDLK_a) {
-					movePaddle(&game_paddle, LEFT);
-				}
-				else if (pressed_key == SDLK_d) {
-					movePaddle(&game_paddle, RIGHT);
-				}
-			}
-			updateScreen(gRenderer, &game_paddle, &game_ball);
+			updatePaddle(&game_paddle, &event);
 		}
-	}
+		updateBall(&game_ball);
+		renderScreen(gRenderer, &game_paddle, &game_ball);
 
+		SDL_Delay(FRAME_DELAY);
+	}
 	free(game_paddle.paddle_rectangle);
 
 	return 0;

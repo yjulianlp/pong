@@ -71,12 +71,31 @@ void updateBall(Ball* ball, Paddle* paddle) {
 	(*ball).center_x += x_diff;
 	(*ball).center_y += y_diff;
 
-	//touching paddle?
 	if (SDL_HasIntersection((*ball).hitbox, (*paddle).paddle_rectangle)) {
 		std::cout << "hit";
 		(*ball).angle *= -1;
 		x_diff = ((*ball).x_velocity*10) * cos((*ball).angle);
 		y_diff = ((*ball).y_velocity*10) * sin((*ball).angle);
+		(*(*ball).hitbox).x += x_diff;
+		(*(*ball).hitbox).y += y_diff;
+		(*ball).center_x += x_diff;
+		(*ball).center_y += y_diff;
+	}
+	else if ((*(*ball).hitbox).x <= (*ball).radius || (*(*ball).hitbox).x >= SCREEN_WIDTH - (*ball).radius) {
+		std::cout << "hit side";
+		(*ball).angle += 180;
+		x_diff = ((*ball).x_velocity * 10) * cos((*ball).angle);
+		y_diff = ((*ball).y_velocity * 10) * sin((*ball).angle);
+		(*(*ball).hitbox).x += x_diff;
+		(*(*ball).hitbox).y += y_diff;
+		(*ball).center_x += x_diff;
+		(*ball).center_y += y_diff;
+	}
+	else if ((*(*ball).hitbox).y <= (*ball).radius || (*(*ball).hitbox).y >= SCREEN_HEIGHT - (*ball).radius) {
+		std::cout << "hit top or bottom";
+		(*ball).angle -= 180;
+		x_diff = ((*ball).x_velocity * 10) * cos((*ball).angle);
+		y_diff = ((*ball).y_velocity * 10) * sin((*ball).angle);
 		(*(*ball).hitbox).x += x_diff;
 		(*(*ball).hitbox).y += y_diff;
 		(*ball).center_x += x_diff;

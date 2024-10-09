@@ -1,14 +1,15 @@
 #include <SDL.h>
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 
 constexpr auto SCREEN_HEIGHT = 1000;
 constexpr auto SCREEN_WIDTH = 1000;
 constexpr auto PADDLE_MOVEMENT_SPEED = 20;
-constexpr auto BALL_BASE_X_VELOCITY = 5;
+constexpr auto BALL_BASE_X_VELOCITY = -5;
 constexpr auto BALL_BASE_Y_VELOCITY = 5;
 constexpr auto PI = 3.14;
-constexpr auto INITIAL_BALL_ANGLE = (3.14 * 5) / 2;
+constexpr auto INITIAL_BALL_ANGLE = (3.14 / 4.0);
 constexpr auto FRAME_DELAY = 1000 / 60;
 
 enum Direction {
@@ -63,7 +64,7 @@ void drawBall(SDL_Renderer* renderer, Ball* ball) {
 
 }
 
-void updateBall(Ball* ball, Paddle* paddle) {
+void updateBall(Ball* ball, Paddle* paddle, Paddle* paddle2) {
 	float x_diff = ((*ball).x_velocity) * cos((*ball).angle);
 	float y_diff = ((*ball).y_velocity) * sin((*ball).angle);
 	(*(*ball).hitbox).x += x_diff;
@@ -71,29 +72,53 @@ void updateBall(Ball* ball, Paddle* paddle) {
 	(*ball).center_x += x_diff;
 	(*ball).center_y += y_diff;
 
+	
 	if (SDL_HasIntersection((*ball).hitbox, (*paddle).paddle_rectangle)) {
-		std::cout << "hit";
-		(*ball).angle *= -1;
-		x_diff = ((*ball).x_velocity*10) * cos((*ball).angle);
-		y_diff = ((*ball).y_velocity*10) * sin((*ball).angle);
+		std::cout << "hit\n";
+		std::cout << "\nold angle: " << (*ball).angle;
+		(*ball).angle = ((rand() % 70) + 20) * (PI / 180.0);
+		if (rand() % 2 == 0) {
+			(*ball).x_velocity *= -1;
+		}
+		(*ball).y_velocity = -BALL_BASE_Y_VELOCITY;
+		(*(*ball).hitbox).x += x_diff;
+		(*(*ball).hitbox).y += y_diff;
+		(*ball).center_x += x_diff;
+		(*ball).center_y += y_diff;
+	}
+	else if (SDL_HasIntersection((*ball).hitbox, (*paddle2).paddle_rectangle)) {
+		std::cout << "hit\n";
+		std::cout << "\nold angle: " << (*ball).angle;
+		(*ball).angle = ((rand() % 70)+20) * (PI / 180.0);
+		if (rand() % 2 == 0) {
+			(*ball).x_velocity *= -1;
+		}
+		(*ball).y_velocity = BALL_BASE_Y_VELOCITY;
 		(*(*ball).hitbox).x += x_diff;
 		(*(*ball).hitbox).y += y_diff;
 		(*ball).center_x += x_diff;
 		(*ball).center_y += y_diff;
 	}
 	else if ((*(*ball).hitbox).x <= (*ball).radius || (*(*ball).hitbox).x >= SCREEN_WIDTH - (*ball).radius) {
-		std::cout << "hit side";
-		(*ball).angle += 180;
+		std::cout << "\nhit side\n";
+		(*ball).x_velocity *= -1;
 		x_diff = ((*ball).x_velocity * 10) * cos((*ball).angle);
 		y_diff = ((*ball).y_velocity * 10) * sin((*ball).angle);
+		std::cout << "\n\ncurrent velocity:\nx: " << (*ball).x_velocity << "\ny: " << (*ball).y_velocity << "\n";
+		std::cout << "current values:\ncos: " << cos((*ball).angle) << "\n sin: " << sin((*ball).angle) << "\n";
+		if (y_diff < (*ball).y_velocity / 20) {
+
+			std::cout << "\nsped up bounce";
+			(*ball).angle += (PI / 12);
+		}
 		(*(*ball).hitbox).x += x_diff;
 		(*(*ball).hitbox).y += y_diff;
 		(*ball).center_x += x_diff;
 		(*ball).center_y += y_diff;
 	}
 	else if ((*(*ball).hitbox).y <= (*ball).radius || (*(*ball).hitbox).y >= SCREEN_HEIGHT - (*ball).radius) {
-		std::cout << "hit top or bottom";
-		(*ball).angle -= 180;
+		std::cout << "hit top or bottom\n";
+		(*ball).y_velocity *= -1;
 		x_diff = ((*ball).x_velocity * 10) * cos((*ball).angle);
 		y_diff = ((*ball).y_velocity * 10) * sin((*ball).angle);
 		(*(*ball).hitbox).x += x_diff;
@@ -104,25 +129,38 @@ void updateBall(Ball* ball, Paddle* paddle) {
 
 }
 
-void updatePaddle(Paddle* paddle, SDL_Event* event) {
+void updatePaddle(Paddle* paddle, Paddle* paddle2, SDL_Event* event) {
 	const Uint8* pressed_keys = SDL_GetKeyboardState(NULL);
 	if (pressed_keys[SDL_SCANCODE_A]) {
 		if ((*(*paddle).paddle_rectangle).x > 0) {
 			(*(*paddle).paddle_rectangle).x -= PADDLE_MOVEMENT_SPEED;
 		}	
-	}else if(pressed_keys[SDL_SCANCODE_D]) {
+	}
+	else if(pressed_keys[SDL_SCANCODE_D]) {
 		if ((*(*paddle).paddle_rectangle).x < SCREEN_WIDTH) {
 			(*(*paddle).paddle_rectangle).x += PADDLE_MOVEMENT_SPEED;
 		}
 	}
+	else if (pressed_keys[SDL_SCANCODE_J]) {
+		if ((*(*paddle2).paddle_rectangle).x > 0) {
+			(*(*paddle2).paddle_rectangle).x -= PADDLE_MOVEMENT_SPEED;
+		}
+	}
+	else if (pressed_keys[SDL_SCANCODE_L]) {
+		if ((*(*paddle2).paddle_rectangle).x < SCREEN_WIDTH) {
+			(*(*paddle2).paddle_rectangle).x += PADDLE_MOVEMENT_SPEED;
+		}
+	}
+
 }
 
-void renderScreen(SDL_Renderer* renderer, Paddle* paddle, Ball* ball) {
+void renderScreen(SDL_Renderer* renderer, Paddle* paddle, Paddle* paddle2, Ball* ball) {
 	SDL_SetRenderDrawColor(renderer, 0 ,0 ,0 , 1);
 	SDL_RenderClear(renderer);
 	SDL_RenderFillRect(renderer, (*ball).hitbox);
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
 	SDL_RenderFillRect(renderer, (*paddle).paddle_rectangle);
+	SDL_RenderFillRect(renderer, (*paddle2).paddle_rectangle);
 	drawBall(renderer, ball);
 	SDL_RenderPresent(renderer);
 }
@@ -137,10 +175,18 @@ int main(int argc, char* argv[]) {
 	SDL_Window* gWindow = SDL_CreateWindow("Game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	SDL_Renderer* gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
 
-	Paddle game_paddle;
+	Paddle game_paddle, game_paddle2;
 	game_paddle.paddle_rectangle = (SDL_Rect*) malloc(sizeof(SDL_Rect));
+	game_paddle2.paddle_rectangle = (SDL_Rect*)malloc(sizeof(SDL_Rect));
 	if (game_paddle.paddle_rectangle != NULL) {
-		*(game_paddle.paddle_rectangle) = { SCREEN_WIDTH / 2, SCREEN_HEIGHT - (SCREEN_HEIGHT / 6), 100, 20 };
+		*(game_paddle.paddle_rectangle) = { SCREEN_WIDTH / 2, SCREEN_HEIGHT - (SCREEN_HEIGHT / 8), 100, 20 };
+	}
+	else {
+		std::cout << "malloc failed";
+		return 1;
+	}
+	if (game_paddle2.paddle_rectangle != NULL) {
+		*(game_paddle2.paddle_rectangle) = { SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 8), 100, 20 };
 	}
 	else {
 		std::cout << "malloc failed";
@@ -163,10 +209,10 @@ int main(int argc, char* argv[]) {
 			if (event.type == SDL_QUIT) {
 				running = false;
 			}
-			updatePaddle(&game_paddle, &event);
+			updatePaddle(&game_paddle, &game_paddle2, &event);
 		}
-		updateBall(&game_ball, &game_paddle);
-		renderScreen(gRenderer, &game_paddle, &game_ball);
+		updateBall(&game_ball, &game_paddle, &game_paddle2);
+		renderScreen(gRenderer, &game_paddle, &game_paddle2, &game_ball);
 
 		SDL_Delay(FRAME_DELAY);
 	}
